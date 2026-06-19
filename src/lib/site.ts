@@ -5,7 +5,7 @@ export const SITE = {
   description:
     "A builder community for AI-native development, agent operations, A2A protocol work, and MCP tooling.",
   slackUrl:
-    "https://join.slack.com/t/vibeopsforum/shared_invite/zt-3pgetqklv-_F1SDrDVKEFinIRg9PlQ3Q",
+    "https://join.slack.com/t/vibeopsforum/shared_invite/zt-40mvrfmy8-gqycEL7G~Q2tB5KuNW8tBQ",
 };
 
 export const navItems = [
