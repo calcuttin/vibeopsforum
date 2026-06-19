@@ -72,11 +72,13 @@ const structuredData = {
             </p>
           </div>
           <div class="grid grid-cols-[8rem_1fr] gap-5">
-            <div class="grid aspect-square grid-cols-5 grid-rows-5 gap-1 bg-white p-2 shadow-[0_0_28px_rgba(255,255,255,0.28)]">
-              {Array.from({ length: 25 }).map((_, index) => (
-                <span class:list={["bg-[#08060b]", [0, 1, 2, 4, 5, 7, 9, 10, 12, 13, 16, 18, 19, 20, 22, 24].includes(index) ? "opacity-100" : "opacity-0"]}></span>
-              ))}
-            </div>
+            <img
+              src="/vibeops-forum-qr.png"
+              alt="QR code to join the VibeOps Forum Slack"
+              width="256"
+              height="256"
+              class="aspect-square w-32 bg-white shadow-[0_0_28px_rgba(255,255,255,0.28)]"
+            />
             <p class="self-end text-sm leading-6 text-[#cdb8c4]">
               Scanline energy, working artifacts, and people comparing the messy details behind AI-native shipping.
             </p>
