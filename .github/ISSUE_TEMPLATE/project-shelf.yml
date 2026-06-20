@@ -1,0 +1,48 @@
+name: Project shelf submission
+description: Post a GitHub repo to the community project shelf
+title: "[Project shelf] "
+labels:
+  - project-shelf
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Suggest a public GitHub repository for the VibeOps project shelf. After a quick review, we'll add it to the site so other builders can find and inspect it.
+
+  - type: input
+    id: repo-url
+    attributes:
+      label: GitHub repo URL
+      description: Link to the public repository.
+      placeholder: https://github.com/org/repo
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Why should builders look at this repo?
+      description: One or two sentences on what it does and why it belongs on the shelf.
+    validations:
+      required: true
+
+  - type: input
+    id: tags
+    attributes:
+      label: Tags
+      description: Comma-separated topics such as vibecoding, mcp, a2a, agent.
+      placeholder: vibecoding, mcp, agent
+
+  - type: input
+    id: submitted-by
+    attributes:
+      label: Your name or handle
+      description: How you'd like to be credited for the submission.
+    validations:
+      required: true
+
+  - type: textarea
+    id: feedback
+    attributes:
+      label: What kind of feedback are you looking for?
+      description: Optional. Useful if you want review, adoption ideas, or implementation notes from the community.
