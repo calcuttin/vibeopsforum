@@ -6,6 +6,11 @@ export const SITE = {
     "A builder community for AI-native development, agent operations, A2A protocol work, and MCP tooling.",
   slackUrl:
     "https://join.slack.com/t/vibeopsforum/shared_invite/zt-40mvrfmy8-gqycEL7G~Q2tB5KuNW8tBQ",
+  githubUrl: "https://github.com/seefor/vibeopsforum",
+  projectShelfSubmitUrl:
+    "https://github.com/seefor/vibeopsforum/issues/new?template=project-shelf",
+  communityContentSubmitUrl:
+    "https://github.com/seefor/vibeopsforum/issues/new?template=community-content",
 };
 
 export const navItems = [
@@ -13,7 +18,15 @@ export const navItems = [
   { href: "/events/", label: "Events" },
   { href: "/resources/", label: "Resources" },
   { href: "/projects/", label: "Projects" },
+  { href: "/community/", label: "Community Content" },
 ];
+
+export const communityContentTypes = {
+  all: { label: "All", kicker: "Everything" },
+  youtube: { label: "YouTube", kicker: "Video" },
+  podcast: { label: "Podcasts", kicker: "Audio" },
+  blog: { label: "Blogs", kicker: "Writing" },
+} as const;
 
 export const topics = [
   {

@@ -1,0 +1,69 @@
+name: Community content submission
+description: Suggest a YouTube channel, podcast, or blog for the community feed
+title: "[Community content] "
+labels:
+  - community-content
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Suggest a YouTube channel, podcast show, or blog for the VibeOps community content page. After a quick review, we'll add it to the site.
+
+  - type: dropdown
+    id: content-type
+    attributes:
+      label: Content type
+      options:
+        - YouTube
+        - Podcast
+        - Blog
+    validations:
+      required: true
+
+  - type: input
+    id: url
+    attributes:
+      label: URL
+      description: Link to the channel, show, episode, or blog.
+      placeholder: https://...
+    validations:
+      required: true
+
+  - type: input
+    id: title
+    attributes:
+      label: Title
+      description: Name of the channel, show, or blog.
+    validations:
+      required: true
+
+  - type: input
+    id: creator
+    attributes:
+      label: Creator or author
+      description: Who makes it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Why should builders check this out?
+      description: One or two sentences on what it covers and why it belongs on the feed.
+    validations:
+      required: true
+
+  - type: input
+    id: tags
+    attributes:
+      label: Tags
+      description: Comma-separated topics such as vibecoding, mcp, a2a, agent-ops.
+      placeholder: vibecoding, agents, tooling
+
+  - type: input
+    id: submitted-by
+    attributes:
+      label: Your name or handle
+      description: How you'd like to be credited for the suggestion.
+    validations:
+      required: true

@@ -42,8 +42,22 @@ const resources = defineCollection({
   }),
 });
 
+const communityContent = defineCollection({
+  loader: glob({ pattern: "**/*.json", base: "./src/content/community-content" }),
+  schema: z.object({
+    title: z.string(),
+    description: z.string(),
+    url: z.string().url(),
+    type: z.enum(["youtube", "podcast", "blog"]),
+    creator: z.string(),
+    tags: z.array(z.string()).default([]),
+    submittedAt: z.coerce.date(),
+  }),
+});
+
 export const collections = {
   events,
   projects,
   resources,
+  communityContent,
 };
