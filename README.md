@@ -30,4 +30,14 @@ The production site is emitted to `dist/`.
 - Events live in `src/content/events/`
 - Projects live in `src/content/projects/`
 - Resource articles live in `src/content/resources/`
+- Community content (YouTube, podcasts, blogs) lives in `src/content/community-content/`
 - Shared site metadata lives in `src/lib/site.ts`
+
+## Submissions
+
+Community members can suggest new listings through GitHub issue templates:
+
+- [Project shelf submission](https://github.com/seefor/vibeopsforum/issues/new?template=project-shelf)
+- [Community content submission](https://github.com/seefor/vibeopsforum/issues/new?template=community-content)
+
+After review, approved submissions are added as JSON files in the matching content folder.
