@@ -1,48 +1,128 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { formatDate, SITE } from "../lib/site";
+import { formatDate, formatEventDateTime, isUpcoming, SITE } from "../lib/site";
 
-const events = (await getCollection("events")).sort(
+const allEvents = (await getCollection("events")).sort(
   (a, b) => a.data.date.getTime() - b.data.date.getTime(),
 );
+const upcomingEvents = allEvents.filter((event) =>
+  isUpcoming(event.data.date, event.data.endDate),
+);
+const pastEvents = allEvents
+  .filter((event) => !isUpcoming(event.data.date, event.data.endDate))
+  .reverse();
+
+const eventListSchema = upcomingEvents.map((event) => ({
+  "@context": "https://schema.org",
+  "@type": "Event",
+  name: event.data.title,
+  startDate: event.data.date.toISOString(),
+  endDate: event.data.endDate?.toISOString(),
+  eventAttendanceMode: event.data.location.toLowerCase().includes("virtual")
+    ? "https://schema.org/OnlineEventAttendanceMode"
+    : "https://schema.org/MixedEventAttendanceMode",
+  location: {
+    "@type": "Place",
+    name: event.data.location,
+  },
+  description: event.data.description,
+  url: event.data.url || `${SITE.url}/events/`,
+}));
+
+const structuredData =
+  eventListSchema.length === 0
+    ? undefined
+    : eventListSchema.length === 1
+      ? eventListSchema[0]
+      : eventListSchema;
 ---
 
 <BaseLayout
   title="AI Builder Events"
   description="Upcoming VibeOps Forum events for vibecoding, agent operations, A2A protocol, and MCP tooling."
+  structuredData={structuredData}
 >
   <section class="shell py-20">
     <div class="max-w-3xl">
-      <p class="mono text-xs uppercase tracking-[0.35em] text-teal-200">Events</p>
+      <p class="mono kicker text-xs uppercase tracking-[0.35em]">Events</p>
       <h1 class="mt-5 text-5xl font-semibold tracking-[-0.06em] text-white md:text-6xl">Show the work in progress.</h1>
       <p class="mt-5 text-lg leading-8 text-zinc-300">
         Events are built around practical demos, office hours, and project feedback. Join the Slack to get calendar details and suggest sessions.
       </p>
     </div>
 
-    <div class="mt-12 divide-y divide-white/10 border-y border-white/10">
-      {events.map((event) => (
-        <article class="grid gap-5 py-7 md:grid-cols-[12rem_1fr_auto] md:items-start">
-          <div>
-            <time class="mono text-sm text-teal-200">{formatDate(event.data.date)}</time>
-            <p class="mt-2 text-xs uppercase tracking-[0.18em] text-zinc-500">{event.data.timezone}</p>
-          </div>
-          <div>
-            <h2 class="text-2xl font-semibold tracking-[-0.03em] text-white">{event.data.title}</h2>
-            <p class="mt-2 text-sm text-zinc-400">{event.data.location}</p>
-            <p class="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">{event.data.description}</p>
-            <div class="mt-4 flex flex-wrap gap-2">
-              {event.data.tags.map((tag) => <span class="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-400">{tag}</span>)}
-            </div>
-          </div>
-          {event.data.url ? (
-            <a class="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white hover:border-teal-200/60" href={event.data.url}>Event link</a>
-          ) : (
-            <a class="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white hover:border-teal-200/60" href={SITE.slackUrl}>Ask in Slack</a>
-          )}
-        </article>
-      ))}
+    <div class="mt-12">
+      <h2 class="mono kicker text-xs uppercase tracking-[0.32em]">Upcoming</h2>
+      {upcomingEvents.length === 0 ? (
+        <p class="mt-6 rounded-2xl border border-white/10 bg-white/6 p-5 text-sm leading-6 text-zinc-400">
+          No upcoming sessions right now.{" "}
+          <a class="accent-link" href={SITE.slackUrl}>Propose one in Slack</a>.
+        </p>
+      ) : (
+        <div class="mt-6 divide-y divide-white/10 border-y border-white/10">
+          {upcomingEvents.map((event) => (
+            <article class="grid gap-5 py-7 md:grid-cols-[12rem_1fr_auto] md:items-start">
+              <div>
+                <time class="mono text-sm text-[#38e8ff]" datetime={event.data.date.toISOString()}>
+                  {formatDate(event.data.date)}
+                </time>
+                <p class="mt-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
+                  {formatEventDateTime(event.data.date, event.data.timezone)}
+                </p>
+              </div>
+              <div>
+                <h3 class="text-2xl font-semibold tracking-[-0.03em] text-white">{event.data.title}</h3>
+                <p class="mt-2 text-sm text-zinc-400">{event.data.location}</p>
+                <p class="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">{event.data.description}</p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                  {event.data.tags.map((tag) => (
+                    <span class="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-400">{tag}</span>
+                  ))}
+                </div>
+              </div>
+              {event.data.url ? (
+                <a
+                  class="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:border-[#38e8ff]/60"
+                  href={event.data.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Event link
+                </a>
+              ) : (
+                <a
+                  class="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:border-[#38e8ff]/60"
+                  href={SITE.slackUrl}
+                >
+                  Ask in Slack
+                </a>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
     </div>
+
+    {pastEvents.length > 0 && (
+      <div class="mt-16">
+        <h2 class="mono text-xs uppercase tracking-[0.32em] text-zinc-500">Past sessions</h2>
+        <div class="mt-6 divide-y divide-white/10 border-y border-white/10">
+          {pastEvents.map((event) => (
+            <article class="grid gap-5 py-7 opacity-70 md:grid-cols-[12rem_1fr] md:items-start">
+              <div>
+                <time class="mono text-sm text-zinc-500" datetime={event.data.date.toISOString()}>
+                  {formatDate(event.data.date)}
+                </time>
+              </div>
+              <div>
+                <h3 class="text-xl font-semibold tracking-[-0.03em] text-white">{event.data.title}</h3>
+                <p class="mt-2 text-sm text-zinc-500">{event.data.location}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    )}
   </section>
 </BaseLayout>

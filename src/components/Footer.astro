@@ -1,5 +1,5 @@
 ---
-import { SITE, navItems } from "../lib/site";
+import { navItems } from "../lib/site";
 ---
 
 <footer class="border-t border-white/10 bg-[#08060b]/55 py-10">
@@ -12,7 +12,6 @@ import { SITE, navItems } from "../lib/site";
     </div>
     <div class="grid grid-cols-2 gap-4 text-sm text-[#cdb8c4] sm:grid-cols-3">
       {navItems.map((item) => <a class="hover:text-white" href={item.href}>{item.label}</a>)}
-      <a class="hover:text-white" href={SITE.slackUrl}>Join Slack</a>
     </div>
   </div>
 </footer>
