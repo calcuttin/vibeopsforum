@@ -21,7 +21,7 @@ const typeStyles = {
   <section class="shell py-20">
     <div class="grid gap-8 md:grid-cols-[0.9fr_1.1fr]">
       <div>
-        <p class="mono text-xs uppercase tracking-[0.35em] text-teal-200">Community content</p>
+        <p class="mono kicker text-xs uppercase tracking-[0.35em]">Community content</p>
         <h1 class="mt-5 text-5xl font-semibold tracking-[-0.06em] text-white md:text-6xl">Videos, shows, and blogs worth your time.</h1>
       </div>
       <div class="max-w-2xl">
@@ -57,7 +57,7 @@ const typeStyles = {
         >
           <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p class="mono text-xs uppercase tracking-[0.22em] text-teal-200">{item.data.creator}</p>
+              <p class="mono kicker text-xs uppercase tracking-[0.22em]">{item.data.creator}</p>
               <h2 class="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">{item.data.title}</h2>
             </div>
             <span class:list={["mono rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em]", typeStyles[item.data.type]]}>
@@ -70,7 +70,7 @@ const typeStyles = {
               <span class="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-400">{tag}</span>
             ))}
           </div>
-          <a class="mt-6 inline-block accent-link text-sm" href={item.data.url} target="_blank" rel="noreferrer">
+          <a class="mt-6 inline-block accent-link text-sm" href={item.data.url} target="_blank" rel="noopener noreferrer">
             {item.data.type === "youtube" ? "Watch on YouTube" : item.data.type === "podcast" ? "Listen to show" : "Read blog"}
           </a>
         </article>

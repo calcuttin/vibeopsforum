@@ -37,7 +37,7 @@ The production site is emitted to `dist/`.
 
 Community members can suggest new listings through GitHub issue templates:
 
-- [Project shelf submission](https://github.com/seefor/vibeopsforum/issues/new?template=project-shelf)
-- [Community content submission](https://github.com/seefor/vibeopsforum/issues/new?template=community-content)
+- [Project shelf submission](https://github.com/calcuttin/vibeopsforum/issues/new?template=project-shelf)
+- [Community content submission](https://github.com/calcuttin/vibeopsforum/issues/new?template=community-content)
 
 After review, approved submissions are added as JSON files in the matching content folder.

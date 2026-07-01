@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { topicLabels } from "../../lib/site";
 
 const resources = (await getCollection("resources")).sort((a, b) => a.data.order - b.data.order);
 ---
@@ -12,7 +13,7 @@ const resources = (await getCollection("resources")).sort((a, b) => a.data.order
   <section class="shell py-20">
     <div class="grid gap-10 md:grid-cols-[0.8fr_1.2fr]">
       <div>
-        <p class="mono text-xs uppercase tracking-[0.35em] text-teal-200">Resources</p>
+        <p class="mono kicker text-xs uppercase tracking-[0.35em]">Resources</p>
         <h1 class="mt-5 text-5xl font-semibold tracking-[-0.06em] text-white md:text-6xl">A field guide for AI builders.</h1>
       </div>
       <p class="max-w-2xl text-lg leading-8 text-zinc-300">
@@ -23,8 +24,12 @@ const resources = (await getCollection("resources")).sort((a, b) => a.data.order
     <div class="mt-14 grid gap-5 md:grid-cols-2">
       {resources.map((resource) => (
         <a href={`/resources/${resource.id}/`} class="group glass rounded-2xl p-6">
-          <p class="mono text-xs uppercase tracking-[0.22em] text-teal-200">{resource.data.topic}</p>
-          <h2 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white group-hover:text-teal-100">{resource.data.title}</h2>
+          <p class="mono kicker text-xs uppercase tracking-[0.22em]">
+            {topicLabels[resource.data.topic] ?? resource.data.topic}
+          </p>
+          <h2 class="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white group-hover:text-[#b9f7ff]">
+            {resource.data.title}
+          </h2>
           <p class="mt-3 text-sm leading-6 text-zinc-400">{resource.data.description}</p>
         </a>
       ))}
