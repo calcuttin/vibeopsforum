@@ -170,6 +170,7 @@ export default function MeetingRegistration() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [editingEventId, setEditingEventId] = useState("");
 
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedEventId) ?? events[0],
@@ -248,7 +249,7 @@ export default function MeetingRegistration() {
     }
   }
 
-  async function createHostEvent(event: FormEvent<HTMLFormElement>) {
+  async function saveHostEvent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!db || !user?.email || !isAdmin) return;
 
@@ -272,14 +273,14 @@ export default function MeetingRegistration() {
     }
 
     setError("");
-    setStatus("Creating event...");
+    setStatus(editingEventId ? "Updating event..." : "Creating event...");
     setIsCreatingEvent(true);
 
     try {
-      const createdEvent = doc(collection(db, "meetingEvents"));
+      const eventRef = editingEventId ? doc(db, "meetingEvents", editingEventId) : doc(collection(db, "meetingEvents"));
       const batch = writeBatch(db);
 
-      batch.set(createdEvent, {
+      const eventData = {
         title,
         description,
         startsAt: hostEvent.startsAt,
@@ -289,21 +290,97 @@ export default function MeetingRegistration() {
         customQuestion,
         requireCompany: hostEvent.requireCompany,
         hostEmail: user.email,
-        createdAt: serverTimestamp(),
-      });
+      };
 
-      batch.set(doc(db, "meetingEvents", createdEvent.id, "private", "join"), {
+      if (editingEventId) {
+        batch.update(eventRef, {
+          ...eventData,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        batch.set(eventRef, {
+          ...eventData,
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      batch.set(doc(db, "meetingEvents", eventRef.id, "private", "join"), {
         meetUrl,
-        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+        ...(editingEventId ? {} : { createdAt: serverTimestamp() }),
+      }, { merge: true });
 
       await withWriteTimeout(batch.commit());
 
-      setSelectedEventId(createdEvent.id);
-      setStatus("Host event created.");
+      setSelectedEventId(eventRef.id);
+      setEditingEventId(eventRef.id);
+      setStatus(editingEventId ? "Host event updated." : "Host event created.");
     } catch (err) {
-      setError(getErrorMessage(err, "The host event could not be created."));
+      setError(getErrorMessage(err, editingEventId ? "The host event could not be updated." : "The host event could not be created."));
+      setStatus("");
+    } finally {
+      setIsCreatingEvent(false);
+    }
+  }
+
+  async function editSelectedEvent() {
+    if (!db || !selectedEvent || !isAdmin) return;
+
+    setError("");
+    setStatus("Loading event...");
+
+    try {
+      const joinSnapshot = await getDoc(doc(db, "meetingEvents", selectedEvent.id, "private", "join"));
+      const meetUrl = joinSnapshot.data()?.meetUrl;
+
+      setHostEvent({
+        title: selectedEvent.title,
+        description: selectedEvent.description,
+        meetUrl: typeof meetUrl === "string" ? meetUrl : "",
+        startsAt: selectedEvent.startsAt,
+        endsAt: selectedEvent.endsAt,
+        timezone: selectedEvent.timezone,
+        capacity: selectedEvent.capacity,
+        requireCompany: selectedEvent.requireCompany,
+        customQuestion: selectedEvent.customQuestion,
+      });
+      setEditingEventId(selectedEvent.id);
+      setStatus("Editing selected event.");
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not load the selected event for editing."));
+      setStatus("");
+    }
+  }
+
+  function startNewEvent() {
+    setHostEvent(initialEvent);
+    setEditingEventId("");
+    setError("");
+    setStatus("");
+  }
+
+  async function deleteSelectedEvent() {
+    if (!db || !selectedEvent || !isAdmin) return;
+    if (!window.confirm(`Delete "${selectedEvent.title}"? Registrants will no longer see this event.`)) return;
+
+    setError("");
+    setStatus("Deleting event...");
+    setIsCreatingEvent(true);
+
+    try {
+      const batch = writeBatch(db);
+      batch.delete(doc(db, "meetingEvents", selectedEvent.id, "private", "join"));
+      batch.delete(doc(db, "meetingEvents", selectedEvent.id));
+
+      await withWriteTimeout(batch.commit());
+
+      if (editingEventId === selectedEvent.id) {
+        startNewEvent();
+      }
+      setSelectedEventId("");
+      setStatus("Host event deleted.");
+    } catch (err) {
+      setError(getErrorMessage(err, "The host event could not be deleted."));
       setStatus("");
     } finally {
       setIsCreatingEvent(false);
@@ -401,7 +478,12 @@ export default function MeetingRegistration() {
         </div>
 
         {isAdmin ? (
-          <form className="mt-6 grid gap-4" onSubmit={createHostEvent}>
+          <form className="mt-6 grid gap-4" onSubmit={saveHostEvent}>
+            {editingEventId && (
+              <div className="rounded-md border border-[#38e8ff]/25 bg-[#38e8ff]/10 px-3 py-2 text-sm text-[#d8fbff]">
+                Editing an existing host event.
+              </div>
+            )}
             <label className="grid gap-2 text-sm font-medium text-zinc-200">
               Meeting title
               <input
@@ -483,13 +565,23 @@ export default function MeetingRegistration() {
               />
               Require company or organization
             </label>
-            <button
-              type="submit"
-              disabled={isCreatingEvent}
-              className="rounded-md bg-[#ff2d9f] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_34px_rgba(255,45,159,0.38)] transition hover:bg-[#ff5fba] disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400 disabled:shadow-none"
-            >
-              {isCreatingEvent ? "Creating..." : "Create host event"}
-            </button>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="submit"
+                disabled={isCreatingEvent}
+                className="rounded-md bg-[#ff2d9f] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_34px_rgba(255,45,159,0.38)] transition hover:bg-[#ff5fba] disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400 disabled:shadow-none"
+              >
+                {isCreatingEvent ? "Saving..." : editingEventId ? "Update host event" : "Create host event"}
+              </button>
+              <button
+                type="button"
+                onClick={startNewEvent}
+                disabled={isCreatingEvent}
+                className="rounded-md border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#38e8ff] disabled:cursor-not-allowed disabled:text-zinc-600"
+              >
+                New event
+              </button>
+            </div>
           </form>
         ) : (
           <div className="mt-6 rounded-lg border border-white/10 bg-white/6 p-4 text-sm leading-6 text-zinc-400">
@@ -551,6 +643,24 @@ export default function MeetingRegistration() {
                             <dd className="mt-1 text-white">{selectedEvent.requireCompany ? "Yes" : "No"}</dd>
                           </div>
                         </dl>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <button
+                            type="button"
+                            onClick={editSelectedEvent}
+                            disabled={isCreatingEvent}
+                            className="rounded-md border border-[#38e8ff]/40 px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#38e8ff]/10 disabled:cursor-not-allowed disabled:text-zinc-600"
+                          >
+                            Edit selected
+                          </button>
+                          <button
+                            type="button"
+                            onClick={deleteSelectedEvent}
+                            disabled={isCreatingEvent}
+                            className="rounded-md border border-red-300/35 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:text-zinc-600"
+                          >
+                            Delete selected
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <form className="mt-6 grid gap-4" onSubmit={submitRegistration}>
