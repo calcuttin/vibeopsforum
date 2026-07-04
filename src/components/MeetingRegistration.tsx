@@ -9,7 +9,6 @@ import {
 } from "firebase/auth";
 import type { User } from "firebase/auth";
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
@@ -18,6 +17,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { auth, db, firebaseConfigured } from "../lib/firebase";
 
@@ -147,6 +147,7 @@ export default function MeetingRegistration() {
   const [copyLabel, setCopyLabel] = useState("Copy Meet link");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
 
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedEventId) ?? events[0],
@@ -200,10 +201,14 @@ export default function MeetingRegistration() {
       await signOut(auth);
     }
 
-    const result = await signInWithPopup(auth, new GoogleAuthProvider());
-    if (!result.user.email || !adminEmails.has(result.user.email)) {
-      await signOut(auth);
-      setError("This Google account is not allowed to create host events.");
+    try {
+      const result = await signInWithPopup(auth, new GoogleAuthProvider());
+      if (!result.user.email || !adminEmails.has(result.user.email)) {
+        await signOut(auth);
+        setError("This Google account is not allowed to create host events.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Google sign-in failed.");
     }
   }
 
@@ -211,30 +216,62 @@ export default function MeetingRegistration() {
     event.preventDefault();
     if (!db || !user?.email || !isAdmin) return;
 
+    const title = hostEvent.title.trim();
+    const description = hostEvent.description.trim();
+    const meetUrl = hostEvent.meetUrl.trim();
+    const timezone = hostEvent.timezone.trim();
+    const customQuestion = hostEvent.customQuestion.trim();
+
+    if (!title || !description || !meetUrl || !hostEvent.startsAt || !hostEvent.endsAt || !timezone || !customQuestion) {
+      setError("Complete every host event field before creating the event.");
+      return;
+    }
+    if (new Date(hostEvent.endsAt) <= new Date(hostEvent.startsAt)) {
+      setError("The end time must be after the start time.");
+      return;
+    }
+    if (!Number.isFinite(hostEvent.capacity) || hostEvent.capacity < 1) {
+      setError("Capacity must be at least 1.");
+      return;
+    }
+
     setError("");
     setStatus("Creating event...");
+    setIsCreatingEvent(true);
 
-    const createdEvent = await addDoc(collection(db, "meetingEvents"), {
-      title: hostEvent.title.trim(),
-      description: hostEvent.description.trim(),
-      startsAt: hostEvent.startsAt,
-      endsAt: hostEvent.endsAt,
-      timezone: hostEvent.timezone.trim(),
-      capacity: hostEvent.capacity,
-      customQuestion: hostEvent.customQuestion.trim(),
-      requireCompany: hostEvent.requireCompany,
-      hostEmail: user.email,
-      createdAt: serverTimestamp(),
-    });
+    try {
+      const createdEvent = doc(collection(db, "meetingEvents"));
+      const batch = writeBatch(db);
 
-    await setDoc(doc(db, "meetingEvents", createdEvent.id, "private", "join"), {
-      meetUrl: hostEvent.meetUrl.trim(),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+      batch.set(createdEvent, {
+        title,
+        description,
+        startsAt: hostEvent.startsAt,
+        endsAt: hostEvent.endsAt,
+        timezone,
+        capacity: hostEvent.capacity,
+        customQuestion,
+        requireCompany: hostEvent.requireCompany,
+        hostEmail: user.email,
+        createdAt: serverTimestamp(),
+      });
 
-    setSelectedEventId(createdEvent.id);
-    setStatus("Host event created. Registrants can now sign up.");
+      batch.set(doc(db, "meetingEvents", createdEvent.id, "private", "join"), {
+        meetUrl,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      await batch.commit();
+
+      setSelectedEventId(createdEvent.id);
+      setStatus("Host event created.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The host event could not be created.");
+      setStatus("");
+    } finally {
+      setIsCreatingEvent(false);
+    }
   }
 
   async function submitRegistration(event: FormEvent<HTMLFormElement>) {
@@ -412,9 +449,10 @@ export default function MeetingRegistration() {
             </label>
             <button
               type="submit"
-              className="rounded-md bg-[#ff2d9f] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_34px_rgba(255,45,159,0.38)] transition hover:bg-[#ff5fba]"
+              disabled={isCreatingEvent}
+              className="rounded-md bg-[#ff2d9f] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_34px_rgba(255,45,159,0.38)] transition hover:bg-[#ff5fba] disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400 disabled:shadow-none"
             >
-              Create host event
+              {isCreatingEvent ? "Creating..." : "Create host event"}
             </button>
           </form>
         ) : (
@@ -427,7 +465,7 @@ export default function MeetingRegistration() {
       <section className="rounded-lg border border-white/10 bg-[#0d0710]/86 p-5 shadow-[0_28px_90px_rgba(0,0,0,0.34)] md:p-6">
         <div className="grid gap-6 lg:grid-cols-[1fr_0.82fr]">
           <div>
-            <p className="mono text-xs uppercase text-[#ff8ccd]">Registrant view</p>
+            <p className="mono text-xs uppercase text-[#ff8ccd]">{isAdmin ? "Host preview" : "Registrant view"}</p>
             {events.length > 0 ? (
               <>
                 <label className="mt-3 grid gap-2 text-sm font-medium text-zinc-200">
@@ -464,68 +502,84 @@ export default function MeetingRegistration() {
                       </div>
                     </dl>
 
-                    <form className="mt-6 grid gap-4" onSubmit={submitRegistration}>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <label className="grid gap-2 text-sm font-medium text-zinc-200">
-                          Name
-                          <input
-                            className="rounded-md border border-white/10 bg-white/8 px-3 py-3 text-white outline-none transition focus:border-[#ff2d9f]"
-                            value={attendee.name}
-                            onChange={(event) => setAttendee((current) => ({ ...current, name: event.target.value }))}
-                          />
-                        </label>
-                        <label className="grid gap-2 text-sm font-medium text-zinc-200">
-                          Email
-                          <input
-                            type="email"
-                            className="rounded-md border border-white/10 bg-white/8 px-3 py-3 text-white outline-none transition focus:border-[#ff2d9f]"
-                            value={attendee.email}
-                            onChange={(event) => setAttendee((current) => ({ ...current, email: event.target.value }))}
-                          />
-                        </label>
+                    {isAdmin ? (
+                      <div className="mt-6 rounded-lg border border-[#38e8ff]/25 bg-[#38e8ff]/10 p-4">
+                        <p className="mono text-xs uppercase text-[#38e8ff]">Created event</p>
+                        <dl className="mt-3 grid gap-3 text-sm text-zinc-300 sm:grid-cols-2">
+                          <div>
+                            <dt className="text-zinc-500">Capacity</dt>
+                            <dd className="mt-1 text-white">{selectedEvent.capacity}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-zinc-500">Company required</dt>
+                            <dd className="mt-1 text-white">{selectedEvent.requireCompany ? "Yes" : "No"}</dd>
+                          </div>
+                        </dl>
                       </div>
-                      <div className="grid gap-4 sm:grid-cols-2">
+                    ) : (
+                      <form className="mt-6 grid gap-4" onSubmit={submitRegistration}>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <label className="grid gap-2 text-sm font-medium text-zinc-200">
+                            Name
+                            <input
+                              className="rounded-md border border-white/10 bg-white/8 px-3 py-3 text-white outline-none transition focus:border-[#ff2d9f]"
+                              value={attendee.name}
+                              onChange={(event) => setAttendee((current) => ({ ...current, name: event.target.value }))}
+                            />
+                          </label>
+                          <label className="grid gap-2 text-sm font-medium text-zinc-200">
+                            Email
+                            <input
+                              type="email"
+                              className="rounded-md border border-white/10 bg-white/8 px-3 py-3 text-white outline-none transition focus:border-[#ff2d9f]"
+                              value={attendee.email}
+                              onChange={(event) => setAttendee((current) => ({ ...current, email: event.target.value }))}
+                            />
+                          </label>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <label className="grid gap-2 text-sm font-medium text-zinc-200">
+                            Company{selectedEvent.requireCompany ? "" : " optional"}
+                            <input
+                              className="rounded-md border border-white/10 bg-white/8 px-3 py-3 text-white outline-none transition focus:border-[#ff2d9f]"
+                              value={attendee.company}
+                              onChange={(event) => setAttendee((current) => ({ ...current, company: event.target.value }))}
+                            />
+                          </label>
+                          <label className="grid gap-2 text-sm font-medium text-zinc-200">
+                            Role optional
+                            <input
+                              className="rounded-md border border-white/10 bg-white/8 px-3 py-3 text-white outline-none transition focus:border-[#ff2d9f]"
+                              value={attendee.role}
+                              onChange={(event) => setAttendee((current) => ({ ...current, role: event.target.value }))}
+                            />
+                          </label>
+                        </div>
                         <label className="grid gap-2 text-sm font-medium text-zinc-200">
-                          Company{selectedEvent.requireCompany ? "" : " optional"}
-                          <input
-                            className="rounded-md border border-white/10 bg-white/8 px-3 py-3 text-white outline-none transition focus:border-[#ff2d9f]"
-                            value={attendee.company}
-                            onChange={(event) => setAttendee((current) => ({ ...current, company: event.target.value }))}
+                          {selectedEvent.customQuestion}
+                          <textarea
+                            className="min-h-24 rounded-md border border-white/10 bg-white/8 px-3 py-3 text-white outline-none transition focus:border-[#ff2d9f]"
+                            value={attendee.question}
+                            onChange={(event) => setAttendee((current) => ({ ...current, question: event.target.value }))}
                           />
                         </label>
-                        <label className="grid gap-2 text-sm font-medium text-zinc-200">
-                          Role optional
+                        <label className="flex items-start gap-3 rounded-md border border-white/10 bg-black/20 px-3 py-3 text-sm text-zinc-300">
                           <input
-                            className="rounded-md border border-white/10 bg-white/8 px-3 py-3 text-white outline-none transition focus:border-[#ff2d9f]"
-                            value={attendee.role}
-                            onChange={(event) => setAttendee((current) => ({ ...current, role: event.target.value }))}
+                            type="checkbox"
+                            checked={attendee.consent}
+                            onChange={(event) => setAttendee((current) => ({ ...current, consent: event.target.checked }))}
+                            className="mt-1 h-4 w-4 accent-[#ff2d9f]"
                           />
+                          Send me the meeting details and calendar information for this session.
                         </label>
-                      </div>
-                      <label className="grid gap-2 text-sm font-medium text-zinc-200">
-                        {selectedEvent.customQuestion}
-                        <textarea
-                          className="min-h-24 rounded-md border border-white/10 bg-white/8 px-3 py-3 text-white outline-none transition focus:border-[#ff2d9f]"
-                          value={attendee.question}
-                          onChange={(event) => setAttendee((current) => ({ ...current, question: event.target.value }))}
-                        />
-                      </label>
-                      <label className="flex items-start gap-3 rounded-md border border-white/10 bg-black/20 px-3 py-3 text-sm text-zinc-300">
-                        <input
-                          type="checkbox"
-                          checked={attendee.consent}
-                          onChange={(event) => setAttendee((current) => ({ ...current, consent: event.target.checked }))}
-                          className="mt-1 h-4 w-4 accent-[#ff2d9f]"
-                        />
-                        Send me the meeting details and calendar information for this session.
-                      </label>
-                      <button
-                        type="submit"
-                        className="rounded-md bg-[#ff2d9f] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_34px_rgba(255,45,159,0.38)] transition hover:bg-[#ff5fba]"
-                      >
-                        Register and reveal link
-                      </button>
-                    </form>
+                        <button
+                          type="submit"
+                          className="rounded-md bg-[#ff2d9f] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_34px_rgba(255,45,159,0.38)] transition hover:bg-[#ff5fba]"
+                        >
+                          Register and reveal link
+                        </button>
+                      </form>
+                    )}
                   </>
                 )}
               </>
