@@ -11,7 +11,10 @@ const events = defineCollection({
     endDate: z.coerce.date().optional(),
     timezone: z.string(),
     location: z.string(),
-    url: z.string().optional(),
+    url: z
+      .string()
+      .optional()
+      .transform((value) => (value && value.length > 0 ? value : undefined)),
     tags: z.array(z.string()).default([]),
   }),
 });
@@ -39,6 +42,7 @@ const resources = defineCollection({
     description: z.string().max(160),
     topic: z.enum(["vibecoding", "ao", "a2a", "mcp"]),
     order: z.number().default(0),
+    updatedDate: z.coerce.date().optional(),
   }),
 });
 

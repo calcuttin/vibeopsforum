@@ -6,11 +6,15 @@ export const SITE = {
     "A builder community for AI-native development, agent operations, A2A protocol work, and MCP tooling.",
   slackUrl:
     "https://join.slack.com/t/vibeopsforum/shared_invite/zt-40mvrfmy8-gqycEL7G~Q2tB5KuNW8tBQ",
+  joinUrl: "/join/",
   githubUrl: "https://github.com/seefor/vibeopsforum",
+  ogImage: "/og-default.png",
   projectShelfSubmitUrl:
     "https://github.com/seefor/vibeopsforum/issues/new?template=project-shelf",
   communityContentSubmitUrl:
     "https://github.com/seefor/vibeopsforum/issues/new?template=community-content",
+  eventSubmitUrl:
+    "https://github.com/seefor/vibeopsforum/issues/new?template=event-submission",
 };
 
 export const navItems = [
@@ -65,4 +69,18 @@ export function formatDate(date: Date) {
     day: "numeric",
     year: "numeric",
   }).format(date);
+}
+
+export function formatEventTime(date: Date, timezone: string) {
+  return new Intl.DateTimeFormat("en", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: timezone,
+    timeZoneName: "short",
+  }).format(date);
+}
+
+export function isActiveNav(href: string, pathname: string) {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(href.slice(0, -1));
 }
