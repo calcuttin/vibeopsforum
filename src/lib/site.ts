@@ -22,8 +22,39 @@ export const navItems = [
   { href: "/events/", label: "Events" },
   { href: "/resources/", label: "Resources" },
   { href: "/projects/", label: "Projects" },
+  { href: "/discussions/", label: "Discussions" },
   { href: "/community/", label: "Community Content" },
 ];
+
+// Display order + labels for the project directory groupings.
+export const projectCategories = {
+  netclaw: {
+    label: "NetClaw Ecosystem",
+    description: "The flagship network-ops agent and the projects orbiting it.",
+  },
+  frameworks: {
+    label: "Agent Frameworks & Harnesses",
+    description: "Runtimes, harnesses, and orchestration patterns for autonomous agents.",
+  },
+  mcp: {
+    label: "MCP Servers & Tools",
+    description: "Model Context Protocol servers and tooling for wiring models to real systems.",
+  },
+  networking: {
+    label: "Networking & Infra",
+    description: "Labs, DDI, and workshop material for AI-native network operations.",
+  },
+  research: {
+    label: "Models & Research",
+    description: "Foundation models, tokenization research, and learning resources.",
+  },
+  community: {
+    label: "Community & Site",
+    description: "The forum's own repos and related community skeletons.",
+  },
+} as const;
+
+export type ProjectCategory = keyof typeof projectCategories;
 
 export const communityContentTypes = {
   all: { label: "All", kicker: "Everything" },

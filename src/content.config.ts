@@ -28,6 +28,20 @@ const projects = defineCollection({
     repo: z.string(),
     description: z.string(),
     author: z.string(),
+    // "member" = a community member's own repo; "tool" = a third-party tool a
+    // member shared as something they use. Drives which section it renders in.
+    origin: z.enum(["member", "tool"]),
+    // For tools: which community member recommended it. Ignored for member repos
+    // (their `author` is already the owner).
+    sharedBy: z.string().optional(),
+    category: z.enum([
+      "netclaw",
+      "frameworks",
+      "mcp",
+      "networking",
+      "research",
+      "community",
+    ]),
     tags: z.array(z.string()).default([]),
     submittedAt: z.coerce.date(),
     stars: z.number().optional(),
@@ -59,9 +73,22 @@ const communityContent = defineCollection({
   }),
 });
 
+const discussions = defineCollection({
+  loader: glob({ pattern: "**/*.json", base: "./src/content/discussions" }),
+  schema: z.object({
+    title: z.string(),
+    summary: z.string(),
+    sourceUrl: z.string().url().optional(),
+    sourceLabel: z.string().optional(),
+    tags: z.array(z.string()).default([]),
+    submittedAt: z.coerce.date(),
+  }),
+});
+
 export const collections = {
   events,
   projects,
   resources,
   communityContent,
+  discussions,
 };
